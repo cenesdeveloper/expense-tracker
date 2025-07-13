@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 
 
-export const Route = createFileRoute('/expenses')({
+export const Route = createFileRoute('/_authenticated/expenses')({
   component: Expenses,
 })
 
@@ -53,7 +53,7 @@ function Expenses() {
             .fill(0)
             .map((_, index: number) => (
               <TableRow key={index}>
-              <TableCell className="font-medium"><Skeleton className='h-4'/></TableCell>
+              <TableCell className="font-medium"><Skeleton className="h-4"/></TableCell>
               <TableCell><Skeleton className='h-4'/></TableCell>
               <TableCell><Skeleton className='h-4'/></TableCell>
               </TableRow>

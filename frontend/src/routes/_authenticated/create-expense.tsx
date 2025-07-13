@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useForm } from '@tanstack/react-form'
 
 
-export const Route = createFileRoute('/create-expense')({
+export const Route = createFileRoute('/_authenticated/create-expense')({
   component: CreateExpense,
 })
 
