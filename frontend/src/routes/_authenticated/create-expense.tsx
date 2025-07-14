@@ -1,107 +1,157 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { useForm } from '@tanstack/react-form'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "../../components/ui/calendar";
+import { toast } from "sonner"
+import { useForm } from "@tanstack/react-form";
+import {
+  createExpense,
+  getAllExpensesQueryOptions,
+  loadingCreateExpenseQueryOptions,
+} from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
 
 
-export const Route = createFileRoute('/_authenticated/create-expense')({
+
+import { createExpenseSchema } from "../../../../server/sharedTypes";
+
+export const Route = createFileRoute("/_authenticated/create-expense")({
   component: CreateExpense,
-})
+});
 
 function CreateExpense() {
-  const navigate = useNavigate()
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const form = useForm({
     defaultValues: {
-      title: '',
-      amount: 0,
+      title: "",
+      amount: "0",
+      date: new Date().toISOString(),
     },
     onSubmit: async ({ value }) => {
-      await new Promise(resolve => setTimeout(resolve, 3000)); // Simulate network delay
-      const response = await api.expenses.$post({ json: value});
-      if (!response.ok) {
-        throw new Error('Failed to create expense')
+      const existingExpenses = await queryClient.ensureQueryData(
+        getAllExpensesQueryOptions
+      );
+
+      navigate({ to: "/expenses" });
+
+      // loading state
+      queryClient.setQueryData(loadingCreateExpenseQueryOptions.queryKey, {
+        expense: value,
+      });
+
+      try {
+        const newExpense = await createExpense({ value });
+
+        queryClient.setQueryData(getAllExpensesQueryOptions.queryKey, {
+          ...existingExpenses,
+          expenses: [newExpense, ...existingExpenses.expenses],
+        });
+
+        toast("Expense Created", {
+          description: `Successfully created new expense: ${newExpense.id}`,
+        })
+        // success state
+      } catch (error) {
+        // error state
+        toast("Error", {
+          description: `Failed to create new expense`,
+        })
+      } finally {
+        queryClient.setQueryData(loadingCreateExpenseQueryOptions.queryKey, {});
       }
-      navigate({to: '/expenses'})
     },
   });
 
   return (
-    <div>
+    <div className="p-2">
       <h2>Create Expense</h2>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          form.handleSubmit()
-        }}
-        className="max-w-xl m-auto"
-      >
-        <form.Field
-          name="title"
-          children={(field) => (
-            <>
-              <Label htmlFor={field.name}>Title</Label>
-              <Input
-                id={field.name}
-                name={field.name}
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={e => field.handleChange(e.target.value)}
-              />
-              {field.state.meta.isTouched && field.state.meta.errors && field.state.meta.errors.length > 0 ? (
-              <em>{field.state.meta.errors[0]}</em>
-              ) : null}
+    
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            void form.handleSubmit();
+          }}
+          className="flex flex-col gap-y-4 max-w-xl m-auto"
+        >
+          <form.Field
+            name="title"
+            validators={{
+              onChange: createExpenseSchema.shape.title,
+            }}
+            children={(field) => (
+              <div>
+                <Label htmlFor={field.name}>Title</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.isTouched ? (
+                  <em>{field.state.meta.isTouched}</em>
+                ) : null}
+              </div>
+            )}
+          />
 
-            </>
-          )}
-        />
-        <form.Field
-          name="amount"
-          children={(field) => (
-            <>
-              <Label htmlFor={field.name}>Amount</Label>
-              <Input
-                id={field.name}
-                name={field.name}
-                type="number"
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={e => field.handleChange(Number(e.target.value))}
-              />
-              {field.state.meta.isTouched && field.state.meta.errors && field.state.meta.errors.length > 0 ? (
-                <em>{field.state.meta.errors[0]}</em>
-              ) : null}
-            </>
-          )}
-        />
-        <form.Subscribe
-          selector={(state) => [state.canSubmit, state.isSubmitting]}
-          children={([canSubmit, isSubmitting]) => (
-            <Button className="mt-4" type="submit" disabled={!canSubmit}>
-              {isSubmitting ? '...' : 'Submit'}
-            </Button>
-          )}
-        />
-      </form>
+          <form.Field
+            name="amount"
+            validators={{
+              onChange: createExpenseSchema.shape.amount,
+            }}
+            children={(field) => (
+              <div>
+                <Label htmlFor={field.name}>Amount</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  type="number"
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+                {field.state.meta.isTouched ? (
+                  <em>{field.state.meta.isTouched}</em>
+                ) : null}
+              </div>
+            )}
+          />
+
+          <form.Field
+            name="date"
+            validators={{
+              onChange: createExpenseSchema.shape.date,
+            }}
+            children={(field) => (
+              <div className="self-center">
+                <Calendar
+                  mode="single"
+                  selected={new Date(field.state.value)}
+                  onSelect={(date) =>
+                    field.handleChange((date ?? new Date()).toISOString())
+                  }
+                  className="rounded-md border"
+                />
+                {field.state.meta.isTouched ? (
+                  <em>{field.state.meta.isTouched}</em>
+                ) : null}
+              </div>
+            )}
+          />
+
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            children={([canSubmit, isSubmitting]) => (
+              <Button className="mt-4" type="submit" disabled={!canSubmit}>
+                {isSubmitting ? "..." : "Submit"}
+              </Button>
+            )}
+          />
+        </form>
     </div>
-  )
+  );
 }
-
-// Define the type for expenses endpoint with $post method
-type ExpensesApi = {
-  $post: (args: { json: { title: string; amount: number } }) => Promise<Response>;
-};
-
-const api: { expenses: ExpensesApi } = {
-  expenses: {
-    $post: async ({ json }) => {
-      // Replace with your actual API call logic
-      return fetch('/api/expenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(json),
-      });
-    },
-  },
-};
