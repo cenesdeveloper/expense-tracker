@@ -20,6 +20,7 @@ export const expensesRoute = new Hono()
       .orderBy(desc(expenseTable.createdAt))
       .limit(100);
 
+    console.log('Expenses returned for user', user.id, ':', expenses);
     return c.json({ expenses: expenses });
   })
   .post("/", getUser, zValidator("json", createExpenseSchema), async (c) => {

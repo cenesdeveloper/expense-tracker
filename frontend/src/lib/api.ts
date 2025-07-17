@@ -1,7 +1,6 @@
 import { hc } from "hono/client";
-import { type ApiRoutes } from "../../../server/app";
+import { type ApiRoutes, type CreateExpense } from "../../../server/sharedTypes"; // Update path as needed
 import { queryOptions } from "@tanstack/react-query";
-import { type CreateExpense } from "../../../server/sharedTypes";
 
 const client = hc<ApiRoutes>("/");
 
@@ -30,6 +29,7 @@ export async function getAllExpenses() {
   const data = await res.json();
   return data;
 }
+
 export const getAllExpensesQueryOptions = queryOptions({
   queryKey: ["get-all-expenses"],
   queryFn: getAllExpenses,
